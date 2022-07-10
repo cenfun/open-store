@@ -1,9 +1,14 @@
+const openedMap = new Map();
 
-class OpenDB {
-    constructor(dbName, storeName, storeOptions) {
-        if (typeof indexedDB === 'undefined') {
-            throw new Error("Your browser doesn't support IndexedDB");
-        }
+export const closeDB = (dbName) => {
+    const db = openedMap.get(dbName);
+    if (db) {
+        db.close();
+        openedMap.delete(dbName);
+    }
+};
+export class OpenDB {
+    constructor(dbName = 'db', storeName = 'store', storeOptions = {}) {
         if (typeof dbName !== 'string' || !dbName) {
             throw new Error('dbName is required');
         }
@@ -41,41 +46,55 @@ class OpenDB {
 
     //==========================================================
 
-    open() {
+    open(version) {
         return new Promise((resolve) => {
-            const request = indexedDB.open(this.dbName);
-            request.onerror = () => {
+            closeDB(this.dbName);
+            const request = indexedDB.open(this.dbName, version);
+            request.onerror = (e) => {
                 //console.log('open onerror');
+                //console.error(e);
+                resolve();
+            };
+            request.onblocked = (e) => {
+                //console.log('open onblocked');
+                //console.error(e);
                 resolve();
             };
             request.onsuccess = () => {
                 //console.log('open onsuccess');
-                resolve(request.result);
+                const db = request.result;
+                openedMap.set(this.dbName, db);
+                resolve(db);
             };
             request.onupgradeneeded = () => {
                 //console.log('open onupgradeneeded');
-                const db = request.result;
-                const store = db.createObjectStore(this.storeName, {
+                request.result.createObjectStore(this.storeName, {
                     ... this.storeOptions
                 });
-                store.transaction.oncomplete = () => {
-                    resolve(db);
-                };
             };
         });
     }
 
-    async promisedRequest(rw, handler) {
-        if (!this.db) {
-            this.db = await this.open();
+    async init() {
+        if (this.db) {
+            return;
         }
+
+        const db = await this.open();
+        if (db.objectStoreNames.contains(this.storeName)) {
+            this.db = db;
+            return;
+        }
+
+        const newVersion = parseInt(db.version) + 1;
+        //console.log(db.version, newVersion);
+        closeDB(this.dbName);
+        this.db = await this.open(newVersion);
+    }
+
+    async promisedRequest(rw, handler) {
+        await this.init();
         return new Promise((resolve) => {
-            if (!this.db.objectStoreNames.contains(this.storeName)) {
-                resolve({
-                    error: new Error(`Not found store: ${this.storeName}`)
-                });
-                return;
-            }
             const transaction = this.db.transaction(this.storeName, rw);
             const store = transaction.objectStore(this.storeName);
             const request = handler(store);
@@ -111,6 +130,10 @@ class OpenDB {
     //==========================================================
 
     setItem(key, value) {
+        //in-line keys if keyPath
+        if (this.storeOptions.keyPath) {
+            return this.putItem(key);
+        }
         return this.putItem(value, key);
     }
 
@@ -122,6 +145,7 @@ class OpenDB {
         });
 
         if (response.error) {
+            console.error(response.error);
             return;
         }
         return response.result;
@@ -144,19 +168,50 @@ class OpenDB {
     }
 
     close() {
-        if (this.db) {
-            this.db.close();
-            this.db = null;
-        }
+        closeDB(this.dbName);
+        this.db = null;
     }
 }
 
-export const deleteDB = (dbName = 'db') => {
-    return indexedDB.deleteDatabase(dbName);
+//===========================================================================================
+const indexedDBError = new Error("Your browser doesn't support indexedDB");
+
+export const dbs = () => {
+    if (typeof indexedDB === 'undefined') {
+        throw indexedDBError;
+    }
+    return indexedDB.databases();
 };
 
-export const openDB = (dbName = 'db', storeName = 'store', storeOptions = {}) => {
-    return new OpenDB(dbName, storeName, storeOptions);
+export const deleteDB = (dbName = 'db') => {
+    if (typeof indexedDB === 'undefined') {
+        throw indexedDBError;
+    }
+    return new Promise((resolve) => {
+        closeDB(dbName);
+        const request = indexedDB.deleteDatabase(dbName);
+        request.onerror = function() {
+            //console.error('Error deleting database');
+            resolve(request.error);
+        };
+        request.onblocked = function() {
+            //console.error('Blocked deleting database');
+            resolve('blocked on delete database');
+        };
+        request.onsuccess = function() {
+            //console.log('Database deleted');
+            resolve();
+        };
+    });
+};
+
+export const openDB = async (dbName, storeName, storeOptions) => {
+    if (typeof indexedDB === 'undefined') {
+        throw indexedDBError;
+    }
+    const odb = new OpenDB(dbName, storeName, storeOptions);
+    await odb.init();
+    return odb;
 };
 
 export default openDB;

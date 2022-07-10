@@ -15,21 +15,22 @@
     <!--inject:end-->
 
     <script>
-        const { openDB, deleteDB } = window['open-db'];
+        const {
+            openDB, deleteDB, dbs
+        } = window['open-db'];
 
         const dbName = 'db';
 
-        document.querySelector('.bt-delete').addEventListener('click', () => {
-            deleteDB(dbName);
+        document.querySelector('.bt-delete').addEventListener('click', async () => {
+            const error = await deleteDB(dbName);
+            console.log('deleteDB', error);
         });
 
-        //console.log(openDB);
-        const test = async () => {
-
+        const defaultTest = async () => {
             console.log('=========================================================');
-            console.log('key-value setItem/getItem');
-            let odb = openDB(dbName, 'store-key-value');
-            //console.log(odb);
+            console.log('default key-value setItem/getItem');
+            const odb = await openDB(dbName, 'store-key-value');
+            console.log(odb.db.version);
 
             let v = await odb.getItem('key');
             console.log('getItem key', v);
@@ -65,33 +66,73 @@
             console.log('getItem obj after removeItem', v);
             console.assert(typeof v === 'undefined');
 
-            await odb.clear();
-            v = await odb.getItem('key');
-            console.log('getItem key after clear', v);
-            console.assert(typeof v === 'undefined');
+            // await odb.clear();
+            // v = await odb.getItem('key');
+            // console.log('getItem key after clear', v);
+            // console.assert(typeof v === 'undefined');
 
             console.log('close db');
             odb.close();
+        };
 
+        const autoIncrementTest = async () => {
             console.log('=========================================================');
-            console.log('autoIncrement addItem/getItem');
+            console.log('autoIncrement true');
 
+            const odb = await openDB(dbName, 'store-auto-increment', true);
+            console.log(odb.db.version);
 
-            odb = openDB(dbName, 'store-auto-increment', true);
-
-            v = await odb.getItem('key');
+            let v = await odb.getItem('key');
             console.log('getItem key', v);
 
-            const r = await odb.addItem('value');
+            const r = await odb.addItem({
+                value: 'value',
+                id: 'id1'
+            });
             if (r.error) {
                 console.error(r.error);
             }
         
-            v = await odb.getItem('key');
+            v = await odb.getItem(0);
             console.log('getItem key', v);
+
+            //await odb.clear();
+
+            //console.log('close db');
+            //odb.close();
         };
 
-        test();
+        const keyPathTest = async () => {
+            console.log('=========================================================');
+            console.log('keyPath id');
+            const odb = await openDB(dbName, 'store-id-name', {
+                keyPath: 'id'
+            });
+            console.log(odb.db.version);
+
+            await odb.setItem({
+                id: 'id',
+                name: 'name'
+            });
+            const v = await odb.getItem('id');
+            console.log('getItem id', v);
+            console.assert(v.name === 'name');
+        };
+
+        //console.log(openDB);
+        const async = async () => {
+
+            console.log('all dbs', await dbs());
+
+            await defaultTest();
+        
+            await autoIncrementTest();
+
+            await keyPathTest();
+        
+        };
+
+        async();
 
     </script>
 </body>
