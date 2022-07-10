@@ -9,50 +9,89 @@
 </head>
 <body>
     <button class="bt-delete">delete db</button>
+
     <!--inject:start-->
     <script src="../dist/open-db.js"></script>
     <!--inject:end-->
 
     <script>
-        const { OpenDB } = window['open-db'];
+        const { openDB, deleteDB } = window['open-db'];
+
+        const dbName = 'db';
+
+        document.querySelector('.bt-delete').addEventListener('click', () => {
+            deleteDB(dbName);
+        });
+
         //console.log(openDB);
         const test = async () => {
-            const odb = new OpenDB('db-name', 'store-name');
-            console.log(odb);
 
-            console.log('getItem key', await odb.getItem('key'));
+            console.log('=========================================================');
+            console.log('key-value setItem/getItem');
+            let odb = openDB(dbName, 'store-key-value');
+            //console.log(odb);
+
+            let v = await odb.getItem('key');
+            console.log('getItem key', v);
 
             await odb.setItem('key', 'value');
-            console.log('getItem key', await odb.getItem('key'));
+            v = await odb.getItem('key');
+            console.log('getItem key', v);
+            console.assert(v === 'value');
 
             await odb.setItem('key', 'value2');
-            console.log('getItem key', await odb.getItem('key'));
+            v = await odb.getItem('key');
+            console.log('getItem key', v);
+            console.assert(v === 'value2');
 
 
             await odb.setItem('id', 'id-value');
-            console.log('getItem id', await odb.getItem('id'));
+            v = await odb.getItem('id');
+            console.log('getItem id', v);
+            console.assert(v === 'id-value');
 
-            await odb.setItem('object', {
+            const obj = {
                 id: 'id-value',
                 name: 'name-value',
                 age: 'age-value'
-                //o: odb
-            });
-            console.log('getItem object', await odb.getItem('object'));
+            };
+            await odb.setItem('obj', obj);
+            v = await odb.getItem('obj');
+            console.log('getItem obj', v);
+            console.assert(JSON.stringify(v) === JSON.stringify(obj));
 
-            await odb.removeItem('object');
-            console.log('getItem object after removeItem', await odb.getItem('object'));
+            await odb.removeItem('obj');
+            v = await odb.getItem('obj');
+            console.log('getItem obj after removeItem', v);
+            console.assert(typeof v === 'undefined');
 
             await odb.clear();
-            console.log('getItem key after clear', await odb.getItem('key'));
+            v = await odb.getItem('key');
+            console.log('getItem key after clear', v);
+            console.assert(typeof v === 'undefined');
+
+            console.log('close db');
+            odb.close();
+
+            console.log('=========================================================');
+            console.log('autoIncrement addItem/getItem');
+
+
+            odb = openDB(dbName, 'store-auto-increment', true);
+
+            v = await odb.getItem('key');
+            console.log('getItem key', v);
+
+            const r = await odb.addItem('value');
+            if (r.error) {
+                console.error(r.error);
+            }
         
+            v = await odb.getItem('key');
+            console.log('getItem key', v);
         };
 
         test();
-
-        document.querySelector('.bt-delete').addEventListener('click', () => {
-            indexedDB.deleteDatabase('db-name');
-        });
 
     </script>
 </body>

@@ -1,6 +1,9 @@
 
-export class OpenDB {
-    constructor(dbName = 'odb', storeName = 'ost', storeOptions = {}) {
+class OpenDB {
+    constructor(dbName, storeName, storeOptions) {
+        if (typeof indexedDB === 'undefined') {
+            throw new Error("Your browser doesn't support IndexedDB");
+        }
         if (typeof dbName !== 'string' || !dbName) {
             throw new Error('dbName is required');
         }
@@ -10,9 +13,6 @@ export class OpenDB {
         this.dbName = dbName;
         this.storeName = storeName;
         this.storeOptions = this.initStoreOptions(storeOptions);
-        if (typeof indexedDB === 'undefined') {
-            throw new Error("Your browser doesn't support IndexedDB");
-        }
     }
 
     initStoreOptions(storeOptions) {
@@ -151,4 +151,12 @@ export class OpenDB {
     }
 }
 
-export default OpenDB;
+export const deleteDB = (dbName = 'db') => {
+    return indexedDB.deleteDatabase(dbName);
+};
+
+export const openDB = (dbName = 'db', storeName = 'store', storeOptions = {}) => {
+    return new OpenDB(dbName, storeName, storeOptions);
+};
+
+export default openDB;
