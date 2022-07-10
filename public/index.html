@@ -126,6 +126,7 @@
             const storeName = 'store-key-value';
             let odb = await openDB(dbName, storeName);
 
+            console.log('storeNames', odb.storeNames());
             console.assert(odb.storeNames().length === 3);
 
             let hasStore = await odb.hasStore(storeName);
@@ -148,6 +149,8 @@
             const storeNameNew = 'store-key-value-new';
             odb = await openDB(dbName, storeNameNew);
             console.assert(odb.storeName === storeNameNew);
+
+            console.log('storeNames', odb.storeNames());
             console.assert(odb.storeNames().length === 4);
 
             await odb.useStore(storeName);
@@ -159,6 +162,8 @@
             hasStore = await odb.hasStore(storeNameNew);
             console.log(`hasStore ${storeNameNew} ${hasStore}`);
             console.assert(hasStore === false);
+
+            console.log('storeNames', odb.storeNames());
             console.assert(odb.storeNames().length === 3);
         
 

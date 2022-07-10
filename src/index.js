@@ -101,7 +101,7 @@ class OpenDB {
     //==========================================================
 
     storeNames() {
-        return this.db.objectStoreNames;
+        return Array.from(this.db.objectStoreNames);
     }
 
     hasStore(storeName) {
