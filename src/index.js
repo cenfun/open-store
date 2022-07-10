@@ -6,6 +6,10 @@ const assertIndexedDB = () => {
     }
 };
 
+const getNewVersion = (db) => {
+    return parseInt(db.version) + 1;
+};
+
 export const closeDB = (dbName) => {
     const db = openedMap.get(dbName);
     if (db) {
@@ -75,7 +79,7 @@ class OpenDB {
 
     async init() {
         if (this.db) {
-            return;
+            return this;
         }
 
         const upgradeHandler = (db) => {
@@ -87,16 +91,18 @@ class OpenDB {
         const db = await this.open(upgradeHandler);
         if (db.objectStoreNames.contains(this.storeName)) {
             this.db = db;
-            return;
+            return this;
         }
 
-        const newVersion = parseInt(db.version) + 1;
-        //console.log(db.version, newVersion);
-        closeDB(this.dbName);
-        this.db = await this.open(upgradeHandler, newVersion);
+        this.db = await this.open(upgradeHandler, getNewVersion(db));
+        return this;
     }
 
     //==========================================================
+
+    storeNames() {
+        return this.db.objectStoreNames;
+    }
 
     hasStore(storeName) {
         return this.db.objectStoreNames.contains(storeName);
@@ -118,12 +124,10 @@ class OpenDB {
             db.deleteObjectStore(storeName);
         };
 
-        const newVersion = parseInt(this.db.version) + 1;
-        closeDB(this.dbName);
-        this.db = await this.open(upgradeHandler, newVersion);
+        this.db = await this.open(upgradeHandler, getNewVersion(this.db));
     }
 
-    async createStore(storeName) {
+    async createStore(storeName, storeOptions) {
         if (!storeName || typeof storeName !== 'string') {
             return;
         }
@@ -132,19 +136,25 @@ class OpenDB {
         }
         this.close();
         this.storeName = storeName;
-        await this.init();
+        this.storeOptions = this.initStoreOptions(storeOptions);
+
+        const upgradeHandler = (db) => {
+            db.createObjectStore(this.storeName, {
+                ... this.storeOptions
+            });
+        };
+
+        this.db = await this.open(upgradeHandler, getNewVersion(this.db));
     }
 
-    async useStore(storeName) {
+    useStore(storeName) {
         if (!storeName || typeof storeName !== 'string') {
             return;
         }
         if (!this.hasStore(storeName)) {
             return;
         }
-        this.close();
         this.storeName = storeName;
-        await this.init();
     }
 
     //==========================================================
@@ -256,7 +266,7 @@ export const deleteDB = (dbName = 'db') => {
     });
 };
 
-export const openDB = async (dbName = 'db', storeName = 'store', storeOptions = {}) => {
+export const openDB = (dbName = 'db', storeName = 'store', storeOptions = {}) => {
     assertIndexedDB();
     if (!dbName || typeof dbName !== 'string') {
         return;
@@ -265,8 +275,7 @@ export const openDB = async (dbName = 'db', storeName = 'store', storeOptions = 
         return;
     }
     const odb = new OpenDB(dbName, storeName, storeOptions);
-    await odb.init();
-    return odb;
+    return odb.init();
 };
 
 export default openDB;
