@@ -100,10 +100,6 @@ class OpenDB {
 
     //==========================================================
 
-    storeNames() {
-        return Array.from(this.db.objectStoreNames);
-    }
-
     hasStore(storeName) {
         return this.db.objectStoreNames.contains(storeName);
     }
@@ -155,6 +151,10 @@ class OpenDB {
             return;
         }
         this.storeName = storeName;
+    }
+
+    getStoreNames() {
+        return Array.from(this.db.objectStoreNames);
     }
 
     //==========================================================
@@ -241,7 +241,7 @@ class OpenDB {
 
 //===========================================================================================
 
-export const dbs = () => {
+export const getDBs = () => {
     assertIndexedDB();
     return indexedDB.databases();
 };

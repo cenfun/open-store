@@ -16,7 +16,7 @@
 
     <script>
         const {
-            openDB, deleteDB, dbs
+            openDB, deleteDB, getDBs
         } = window['open-db'];
 
         const dbName = 'db';
@@ -126,8 +126,8 @@
             const storeName = 'store-key-value';
             let odb = await openDB(dbName, storeName);
 
-            console.log('storeNames', odb.storeNames());
-            console.assert(odb.storeNames().length === 3);
+            console.log('getStoreNames', odb.getStoreNames());
+            console.assert(odb.getStoreNames().length === 3);
 
             let hasStore = await odb.hasStore(storeName);
             console.log(`hasStore ${storeName} ${hasStore}`);
@@ -150,8 +150,8 @@
             odb = await openDB(dbName, storeNameNew);
             console.assert(odb.storeName === storeNameNew);
 
-            console.log('storeNames', odb.storeNames());
-            console.assert(odb.storeNames().length === 4);
+            console.log('getStoreNames', odb.getStoreNames());
+            console.assert(odb.getStoreNames().length === 4);
 
             await odb.useStore(storeName);
             console.log(`useStore ${storeName}`);
@@ -163,8 +163,8 @@
             console.log(`hasStore ${storeNameNew} ${hasStore}`);
             console.assert(hasStore === false);
 
-            console.log('storeNames', odb.storeNames());
-            console.assert(odb.storeNames().length === 3);
+            console.log('getStoreNames', odb.getStoreNames());
+            console.assert(odb.getStoreNames().length === 3);
         
 
         };
@@ -172,7 +172,7 @@
         //console.log(openDB);
         const async = async () => {
 
-            console.log('all dbs', await dbs());
+            console.log('getDBs', await getDBs());
 
             await defaultTest();
 
