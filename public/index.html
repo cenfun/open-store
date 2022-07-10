@@ -29,6 +29,7 @@
         const defaultTest = async () => {
             console.log('=========================================================');
             console.log('default key-value setItem/getItem');
+
             const odb = await openDB(dbName, 'store-key-value');
             console.log(odb.db.version);
 
@@ -66,13 +67,31 @@
             console.log('getItem obj after removeItem', v);
             console.assert(typeof v === 'undefined');
 
-            // await odb.clear();
-            // v = await odb.getItem('key');
-            // console.log('getItem key after clear', v);
-            // console.assert(typeof v === 'undefined');
+            await odb.clear();
+            v = await odb.getItem('key');
+            console.log('getItem key after clear', v);
+            console.assert(typeof v === 'undefined');
 
             console.log('close db');
             odb.close();
+            //console.log(odb);
+        };
+
+        const keyPathTest = async () => {
+            console.log('=========================================================');
+            console.log('keyPath id');
+            const odb = await openDB(dbName, 'store-id-name', {
+                keyPath: 'id'
+            });
+            console.log(odb.db.version);
+
+            await odb.setItem({
+                id: 'id',
+                name: 'name'
+            });
+            const v = await odb.getItem('id');
+            console.log('getItem id', v);
+            console.assert(v.name === 'name');
         };
 
         const autoIncrementTest = async () => {
@@ -102,21 +121,42 @@
             //odb.close();
         };
 
-        const keyPathTest = async () => {
-            console.log('=========================================================');
-            console.log('keyPath id');
-            const odb = await openDB(dbName, 'store-id-name', {
-                keyPath: 'id'
-            });
-            console.log(odb.db.version);
+        const storeTest = async () => {
 
-            await odb.setItem({
-                id: 'id',
-                name: 'name'
-            });
-            const v = await odb.getItem('id');
-            console.log('getItem id', v);
-            console.assert(v.name === 'name');
+            const storeName = 'store-key-value';
+            let odb = await openDB(dbName, storeName);
+
+            let hasStore = await odb.hasStore(storeName);
+            console.log(`hasStore ${storeName} ${hasStore}`);
+            console.assert(hasStore === true);
+
+            console.log('deleteStore no name');
+            await odb.deleteStore();
+
+            console.log('deleteStore wrong name');
+            await odb.deleteStore('wrongName');
+
+            console.log(`deleteStore current name: ${storeName}`);
+            await odb.deleteStore(storeName);
+            hasStore = await odb.hasStore(storeName);
+            console.log(`hasStore ${storeName} ${hasStore}`);
+            console.assert(hasStore === true);
+
+
+            const storeNameNew = 'store-key-value-new';
+            odb = await openDB(dbName, storeNameNew);
+            console.assert(odb.storeName === storeNameNew);
+
+            await odb.useStore(storeName);
+            console.log(`useStore ${storeName}`);
+            console.assert(odb.storeName === storeName);
+
+            console.log(`deleteStore: ${storeNameNew}`);
+            await odb.deleteStore(storeNameNew);
+            hasStore = await odb.hasStore(storeNameNew);
+            console.log(`hasStore ${storeNameNew} ${hasStore}`);
+            console.assert(hasStore === false);
+
         };
 
         //console.log(openDB);
@@ -125,11 +165,13 @@
             console.log('all dbs', await dbs());
 
             await defaultTest();
-        
-            await autoIncrementTest();
 
             await keyPathTest();
         
+            await autoIncrementTest();
+        
+            await storeTest();
+
         };
 
         async();

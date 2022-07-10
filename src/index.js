@@ -1,5 +1,11 @@
 const openedMap = new Map();
 
+const assertIndexedDB = () => {
+    if (typeof indexedDB === 'undefined') {
+        throw new Error("Your browser doesn't support indexedDB");
+    }
+};
+
 export const closeDB = (dbName) => {
     const db = openedMap.get(dbName);
     if (db) {
@@ -7,14 +13,8 @@ export const closeDB = (dbName) => {
         openedMap.delete(dbName);
     }
 };
-export class OpenDB {
-    constructor(dbName = 'db', storeName = 'store', storeOptions = {}) {
-        if (typeof dbName !== 'string' || !dbName) {
-            throw new Error('dbName is required');
-        }
-        if (typeof storeName !== 'string' || !storeName) {
-            throw new Error('storeName is required');
-        }
+class OpenDB {
+    constructor(dbName, storeName, storeOptions) {
         this.dbName = dbName;
         this.storeName = storeName;
         this.storeOptions = this.initStoreOptions(storeOptions);
@@ -46,7 +46,7 @@ export class OpenDB {
 
     //==========================================================
 
-    open(version) {
+    open(upgradeHandler, version) {
         return new Promise((resolve) => {
             closeDB(this.dbName);
             const request = indexedDB.open(this.dbName, version);
@@ -68,9 +68,7 @@ export class OpenDB {
             };
             request.onupgradeneeded = () => {
                 //console.log('open onupgradeneeded');
-                request.result.createObjectStore(this.storeName, {
-                    ... this.storeOptions
-                });
+                upgradeHandler(request.result);
             };
         });
     }
@@ -80,7 +78,13 @@ export class OpenDB {
             return;
         }
 
-        const db = await this.open();
+        const upgradeHandler = (db) => {
+            db.createObjectStore(this.storeName, {
+                ... this.storeOptions
+            });
+        };
+
+        const db = await this.open(upgradeHandler);
         if (db.objectStoreNames.contains(this.storeName)) {
             this.db = db;
             return;
@@ -89,11 +93,63 @@ export class OpenDB {
         const newVersion = parseInt(db.version) + 1;
         //console.log(db.version, newVersion);
         closeDB(this.dbName);
-        this.db = await this.open(newVersion);
+        this.db = await this.open(upgradeHandler, newVersion);
     }
 
-    async promisedRequest(rw, handler) {
+    //==========================================================
+
+    hasStore(storeName) {
+        return this.db.objectStoreNames.contains(storeName);
+    }
+
+    async deleteStore(storeName) {
+        if (!storeName || typeof storeName !== 'string') {
+            return;
+        }
+        if (storeName === this.storeName) {
+            //can not delete current store
+            return;
+        }
+        if (!this.hasStore(storeName)) {
+            return;
+        }
+
+        const upgradeHandler = (db) => {
+            db.deleteObjectStore(storeName);
+        };
+
+        const newVersion = parseInt(this.db.version) + 1;
+        closeDB(this.dbName);
+        this.db = await this.open(upgradeHandler, newVersion);
+    }
+
+    async createStore(storeName) {
+        if (!storeName || typeof storeName !== 'string') {
+            return;
+        }
+        if (this.hasStore(storeName)) {
+            return;
+        }
+        this.close();
+        this.storeName = storeName;
         await this.init();
+    }
+
+    async useStore(storeName) {
+        if (!storeName || typeof storeName !== 'string') {
+            return;
+        }
+        if (!this.hasStore(storeName)) {
+            return;
+        }
+        this.close();
+        this.storeName = storeName;
+        await this.init();
+    }
+
+    //==========================================================
+
+    promisedRequest(rw, handler) {
         return new Promise((resolve) => {
             const transaction = this.db.transaction(this.storeName, rw);
             const store = transaction.objectStore(this.storeName);
@@ -174,19 +230,14 @@ export class OpenDB {
 }
 
 //===========================================================================================
-const indexedDBError = new Error("Your browser doesn't support indexedDB");
 
 export const dbs = () => {
-    if (typeof indexedDB === 'undefined') {
-        throw indexedDBError;
-    }
+    assertIndexedDB();
     return indexedDB.databases();
 };
 
 export const deleteDB = (dbName = 'db') => {
-    if (typeof indexedDB === 'undefined') {
-        throw indexedDBError;
-    }
+    assertIndexedDB();
     return new Promise((resolve) => {
         closeDB(dbName);
         const request = indexedDB.deleteDatabase(dbName);
@@ -205,9 +256,13 @@ export const deleteDB = (dbName = 'db') => {
     });
 };
 
-export const openDB = async (dbName, storeName, storeOptions) => {
-    if (typeof indexedDB === 'undefined') {
-        throw indexedDBError;
+export const openDB = async (dbName = 'db', storeName = 'store', storeOptions = {}) => {
+    assertIndexedDB();
+    if (!dbName || typeof dbName !== 'string') {
+        return;
+    }
+    if (!storeName || typeof storeName !== 'string') {
+        return;
     }
     const odb = new OpenDB(dbName, storeName, storeOptions);
     await odb.init();
