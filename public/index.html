@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0">
+    <link rel="icon" href="data:,">
+    <title>Preview Open DB</title>
+</head>
+<body>
+    <button class="bt-delete">delete db</button>
+    <!--inject:start-->
+    <script src="../dist/open-db.js"></script>
+    <!--inject:end-->
+
+    <script>
+        const { OpenDB } = window['open-db'];
+        //console.log(openDB);
+        const test = async () => {
+            const odb = new OpenDB('db-name', 'store-name');
+            console.log(odb);
+
+            console.log('getItem key', await odb.getItem('key'));
+
+            await odb.setItem('key', 'value');
+            console.log('getItem key', await odb.getItem('key'));
+
+            await odb.setItem('key', 'value2');
+            console.log('getItem key', await odb.getItem('key'));
+
+
+            await odb.setItem('id', 'id-value');
+            console.log('getItem id', await odb.getItem('id'));
+
+            await odb.setItem('object', {
+                id: 'id-value',
+                name: 'name-value',
+                age: 'age-value'
+                //o: odb
+            });
+            console.log('getItem object', await odb.getItem('object'));
+
+            await odb.removeItem('object');
+            console.log('getItem object after removeItem', await odb.getItem('object'));
+
+            await odb.clear();
+            console.log('getItem key after clear', await odb.getItem('key'));
+        
+        };
+
+        test();
+
+        document.querySelector('.bt-delete').addEventListener('click', () => {
+            indexedDB.deleteDatabase('db-name');
+        });
+
+    </script>
+</body>
+</html>
