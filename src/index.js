@@ -18,34 +18,50 @@ export const closeDB = (dbName) => {
     }
 };
 class OpenDB {
-    constructor(dbName, storeName, storeOptions) {
+    constructor(dbName, storeName, options) {
         this.dbName = dbName;
         this.storeName = storeName;
-        this.storeOptions = this.initStoreOptions(storeOptions);
+        this.initStoreOptions(options);
     }
 
-    initStoreOptions(storeOptions) {
-        if (!storeOptions) {
-            return {};
+    initStoreOptions(options) {
+        this.storeOptions = {};
+        this.indexOptions = null;
+
+        if (!options) {
+            return;
         }
 
-        if (typeof storeOptions === 'string') {
-            return {
-                keyPath: storeOptions
+        if (typeof options === 'string') {
+            this.storeOptions = {
+                keyPath: options
             };
+            return;
         }
 
-        if (storeOptions === true) {
-            return {
+        if (typeof options === 'boolean') {
+            this.storeOptions = {
                 autoIncrement: true
             };
+            return;
         }
 
-        if (typeof storeOptions === 'object') {
-            return storeOptions;
+        if (typeof options === 'object') {
+            this.initObjectStoreOptions(options);
         }
 
-        return {};
+    }
+
+    initObjectStoreOptions(options) {
+        if (typeof options.keyPath === 'string' && options.keyPath) {
+            this.storeOptions.keyPath = options.keyPath;
+        }
+        if (options.autoIncrement) {
+            this.storeOptions.autoIncrement = true;
+        }
+        if (typeof options.index === 'object' && options.index) {
+            this.indexOptions = options.index;
+        }
     }
 
     //==========================================================
@@ -72,7 +88,7 @@ class OpenDB {
             };
             request.onupgradeneeded = () => {
                 //console.log('open onupgradeneeded');
-                upgradeHandler(request.result);
+                upgradeHandler.call(this, request.result);
             };
         });
     }
@@ -82,20 +98,28 @@ class OpenDB {
             return this;
         }
 
-        const upgradeHandler = (db) => {
-            db.createObjectStore(this.storeName, {
-                ... this.storeOptions
-            });
-        };
-
-        const db = await this.open(upgradeHandler);
+        const db = await this.open(this.createStoreHandler);
         if (db.objectStoreNames.contains(this.storeName)) {
             this.db = db;
             return this;
         }
 
-        this.db = await this.open(upgradeHandler, getNewVersion(db));
+        this.db = await this.open(this.createStoreHandler, getNewVersion(db));
         return this;
+    }
+
+    createStoreHandler(db) {
+        const store = db.createObjectStore(this.storeName, this.storeOptions);
+        //create index
+        if (!this.indexOptions) {
+            return;
+        }
+
+        Object.keys(this.indexOptions).forEach((key) => {
+            const option = this.indexOptions[key];
+            store.createIndex(`by_${key}`, key, option);
+        });
+
     }
 
     //==========================================================
@@ -123,7 +147,7 @@ class OpenDB {
         this.db = await this.open(upgradeHandler, getNewVersion(this.db));
     }
 
-    async createStore(storeName, storeOptions) {
+    async createStore(storeName, options) {
         if (!storeName || typeof storeName !== 'string') {
             return;
         }
@@ -132,15 +156,8 @@ class OpenDB {
         }
         this.close();
         this.storeName = storeName;
-        this.storeOptions = this.initStoreOptions(storeOptions);
-
-        const upgradeHandler = (db) => {
-            db.createObjectStore(this.storeName, {
-                ... this.storeOptions
-            });
-        };
-
-        this.db = await this.open(upgradeHandler, getNewVersion(this.db));
+        this.initStoreOptions(options);
+        this.db = await this.open(this.createStoreHandler, getNewVersion(this.db));
     }
 
     useStore(storeName) {
@@ -205,8 +222,14 @@ class OpenDB {
 
     //==========================================================
 
-    async getItem(key) {
+    async getItem(key, indexName) {
         const response = await this.promisedRequest('readonly', (store) => {
+            if (indexName && typeof indexName === 'string') {
+                indexName = `by_${indexName}`;
+                if (store.indexNames.contains(indexName)) {
+                    return store.index(indexName).get(key);
+                }
+            }
             return store.get(key);
         });
 
@@ -220,9 +243,25 @@ class OpenDB {
     //==========================================================
 
     removeItem(key) {
+        return this.deleteItem(key);
+    }
+
+    deleteItem(key) {
         return this.promisedRequest('readwrite', (store) => {
             return store.delete(key);
         });
+    }
+
+    //==========================================================
+    async count() {
+        const response = await this.promisedRequest('readonly', (store) => {
+            return store.count();
+        });
+        if (response.error) {
+            console.error(response.error);
+            return;
+        }
+        return response.result;
     }
 
     //==========================================================
@@ -266,7 +305,7 @@ export const deleteDB = (dbName = 'db') => {
     });
 };
 
-export const openDB = (dbName = 'db', storeName = 'store', storeOptions = {}) => {
+export const openDB = (dbName = 'db', storeName = 'store', options = {}) => {
     assertIndexedDB();
     if (!dbName || typeof dbName !== 'string') {
         return;
@@ -274,7 +313,7 @@ export const openDB = (dbName = 'db', storeName = 'store', storeOptions = {}) =>
     if (!storeName || typeof storeName !== 'string') {
         return;
     }
-    const odb = new OpenDB(dbName, storeName, storeOptions);
+    const odb = new OpenDB(dbName, storeName, options);
     return odb.init();
 };
 

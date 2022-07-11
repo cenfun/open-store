@@ -20,18 +20,29 @@
         } = window['open-db'];
 
         const dbName = 'db';
+        const defaultStoreName = 'store-default-key-value';
 
         document.querySelector('.bt-delete').addEventListener('click', async () => {
             const error = await deleteDB(dbName);
             console.log('deleteDB', error);
         });
 
+        const uid = function(len = 8, prefix = '') {
+            const dict = '0123456789abcdefghijklmnopqrstuvwxyz';
+            const dictLen = dict.length;
+            let str = prefix;
+            while (len--) {
+                str += dict[Math.random() * dictLen | 0];
+            }
+            return str;
+        };
+
         const defaultTest = async () => {
             console.log('=========================================================');
             console.log('default key-value setItem/getItem');
 
-            const odb = await openDB(dbName, 'store-key-value');
-            console.log(odb.db.version);
+            const odb = await openDB(dbName, defaultStoreName);
+            console.log('version', odb.db.version);
 
             let v = await odb.getItem('key');
             console.log('getItem key', v);
@@ -52,6 +63,10 @@
             console.log('getItem id', v);
             console.assert(v === 'id-value');
 
+            let count = await odb.count();
+            console.log('count', count);
+            console.assert(count === 2);
+
             const obj = {
                 id: 'id-value',
                 name: 'name-value',
@@ -62,15 +77,26 @@
             console.log('getItem obj', v);
             console.assert(JSON.stringify(v) === JSON.stringify(obj));
 
-            await odb.removeItem('obj');
+            count = await odb.count();
+            console.log('count', count);
+            console.assert(count === 3);
+
+            await odb.deleteItem('obj');
             v = await odb.getItem('obj');
-            console.log('getItem obj after removeItem', v);
+            console.log('getItem obj after deleteItem', v);
             console.assert(typeof v === 'undefined');
+
+            count = await odb.count();
+            console.log('count', count);
+            console.assert(count === 2);
 
             await odb.clear();
             v = await odb.getItem('key');
             console.log('getItem key after clear', v);
             console.assert(typeof v === 'undefined');
+            count = await odb.count();
+            console.log('count', count);
+            console.assert(count === 0);
 
             console.log('close db');
             odb.close();
@@ -80,40 +106,60 @@
         const keyPathTest = async () => {
             console.log('=========================================================');
             console.log('keyPath id');
-            const odb = await openDB(dbName, 'store-id-name', {
-                keyPath: 'id'
-            });
-            console.log(odb.db.version);
+            const odb = await openDB(dbName, 'store-key-path-id', 'id');
+            console.log('version', odb.db.version);
 
-            await odb.setItem({
+            const obj = {
                 id: 'id',
                 name: 'name'
-            });
-            const v = await odb.getItem('id');
+            };
+            await odb.setItem(obj);
+            console.log('setItem', obj);
+        
+            let v = await odb.getItem('id');
             console.log('getItem id', v);
+            console.assert(JSON.stringify(v) === JSON.stringify(obj));
             console.assert(v.name === 'name');
+
+            await odb.deleteItem('id');
+
+            v = await odb.getItem('id');
+            console.log('getItem id after deleteItem', v);
+            console.assert(typeof v === 'undefined');
         };
 
         const autoIncrementTest = async () => {
             console.log('=========================================================');
             console.log('autoIncrement true');
 
-            const odb = await openDB(dbName, 'store-auto-increment', true);
-            console.log(odb.db.version);
+            const odb = await openDB(dbName, 'store-auto-increment-true', true);
+            console.log('version', odb.db.version);
 
             let v = await odb.getItem('key');
             console.log('getItem key', v);
 
-            const r = await odb.addItem({
-                value: 'value',
-                id: 'id1'
-            });
+            const obj = {
+                id: uid(4, 'id-'),
+                value: uid(10, 'name-')
+            };
+            const r = await odb.addItem(obj);
             if (r.error) {
                 console.error(r.error);
             }
+            console.log('addItem', obj);
         
-            v = await odb.getItem(0);
+            v = await odb.getItem(1);
             console.log('getItem key', v);
+
+            await odb.putItem({
+                id: 'id-1'
+            }, 1);
+
+            v = await odb.getItem(1);
+            console.log('getItem key after putItem', v);
+            console.assert(v.id === 'id-1');
+
+            console.log('count', await odb.count());
 
             //await odb.clear();
 
@@ -123,7 +169,10 @@
 
         const storeTest = async () => {
 
-            const storeName = 'store-key-value';
+            console.log('=========================================================');
+            console.log('store');
+
+            const storeName = defaultStoreName;
             let odb = await openDB(dbName, storeName);
 
             console.log('getStoreNames', odb.getStoreNames());
