@@ -1,5 +1,5 @@
 # open-store
-open-store is promised store implemented with IndexedDB.
+open-store is promised store implemented with indexedDB
 
 ## Install
 ```sh
