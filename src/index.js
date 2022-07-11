@@ -15,7 +15,7 @@ const closeDB = (dbName) => {
 };
 
 //===========================================================================================
-class OpenDB {
+class OpenStore {
     constructor(dbName, storeName, options) {
         this.dbName = dbName;
         this.storeName = storeName;
@@ -349,7 +349,7 @@ export const deleteDB = (dbName = 'db') => {
     });
 };
 
-export const openDB = (dbName = 'db', storeName = 'store', options = {}) => {
+export const openStore = (dbName = 'db', storeName = 'store', options = {}) => {
     assertIndexedDB();
     if (!dbName || typeof dbName !== 'string') {
         return;
@@ -357,8 +357,8 @@ export const openDB = (dbName = 'db', storeName = 'store', options = {}) => {
     if (!storeName || typeof storeName !== 'string') {
         return;
     }
-    const odb = new OpenDB(dbName, storeName, options);
-    return odb.init();
+    const ost = new OpenStore(dbName, storeName, options);
+    return ost.init();
 };
 
-export default openDB;
+export default openStore;

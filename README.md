@@ -1,35 +1,35 @@
-# open-db
-open-db is promised store implemented with IndexedDB.
+# open-store
+open-store is promised store implemented with IndexedDB.
 
 ## Install
 ```sh
-npm i open-db
+npm i open-store
 ```
 ## Usage
 ```js
-import { openDB } from "open-db";
+import { openStore } from "open-store";
 
-const odb = await openDB();
+const ost = await openStore();
 
-await odb.set('my-key', 'my-value');
-const v = await odb.get('my-key');
+await ost.set('my-key', 'my-value');
+const v = await ost.get('my-key');
 console.assert(v === 'my-value');
 
 ```
 
 ## With custom db name and store name
 ```js
-const odb = await openDB("dbName", "storeName");
+const ost = await openStore("dbName", "storeName");
 ```
 
 ## With store options
 ```js
 //keyPath is "id"
-const odb = await openDB("dbName", "storeName", "id");
+const ost = await openStore("dbName", "storeName", "id");
 //autoIncrement
-const odb = await openDB("dbName", "storeName", true);
+const ost = await openStore("dbName", "storeName", true);
 //or both
-const odb = await openDB("dbName", "storeName", {
+const ost = await openStore("dbName", "storeName", {
     keyPath: "id",
     autoIncrement: true
 });
@@ -37,7 +37,7 @@ const odb = await openDB("dbName", "storeName", {
 
 ## With index options
 ```js
-const odb = await openDB("dbName", "storeName", {
+const ost = await openStore("dbName", "storeName", {
     index: {
         id: {
             unique: true
@@ -49,37 +49,37 @@ const odb = await openDB("dbName", "storeName", {
 });
 
 // get value by index name
-const v = await odb.get('Tom And Jerry', 'name');
+const v = await ost.get('Tom And Jerry', 'name');
 ```
 
 ## API
 ```js
 // global
-import { getDBs, deleteDB, openDB } from "open-db";
+import { getDBs, deleteDB, openStore } from "open-store";
 getDBs()
 deleteDB(dbName)
-openDB(dbName = 'db', storeName = 'store', options = {})
+openStore(dbName = 'db', storeName = 'store', options = {})
 
 // data
-odb.add(value, key)
-odb.put(value, key)
-odb.delete(key)
-odb.set(key, value)
-odb.get(key, indexKey)
-odb.getAll(query, count)
-odb.each(handler)
-odb.count()
-odb.clear()
+ost.add(value, key)
+ost.put(value, key)
+ost.delete(key)
+ost.set(key, value)
+ost.get(key, indexKey)
+ost.getAll(query, count)
+ost.each(handler)
+ost.count()
+ost.clear()
 
 // store
-odb.hasStore(storeName)
-odb.deleteStore(storeName)
-odb.createStore(storeName, options)
-odb.useStore(storeName)
-odb.getStoreNames()
+ost.hasStore(storeName)
+ost.deleteStore(storeName)
+ost.createStore(storeName, options)
+ost.useStore(storeName)
+ost.getStoreNames()
 
 // db
-odb.close()
+ost.close()
 ```
 
 more example: [public/index.html](public/index.html)

@@ -11,13 +11,13 @@
     <button class="bt-delete">delete db</button>
 
     <!--inject:start-->
-    <script src="../dist/open-db.js"></script>
+    <script src="../dist/open-store.js"></script>
     <!--inject:end-->
 
     <script>
         const {
-            openDB, deleteDB, getDBs
-        } = window['open-db'];
+            openStore, deleteDB, getDBs
+        } = window['open-store'];
 
         const dbName = 'db';
         const defaultStoreName = 'store-default-key-value';
@@ -41,11 +41,11 @@
             console.log('=========================================================');
             console.log('default key-value set/get');
 
-            const odb = await openDB();
-            console.log('version', odb.db.version);
+            const ost = await openStore();
+            console.log('version', ost.db.version);
 
-            await odb.set('my-key', 'my-value');
-            const v = await odb.get('my-key');
+            await ost.set('my-key', 'my-value');
+            const v = await ost.get('my-key');
             console.assert(v === 'my-value');
 
         };
@@ -54,29 +54,29 @@
             console.log('=========================================================');
             console.log('custom db name and store name');
 
-            const odb = await openDB(dbName, defaultStoreName);
-            console.log('version', odb.db.version);
+            const ost = await openStore(dbName, defaultStoreName);
+            console.log('version', ost.db.version);
 
-            let v = await odb.get('key');
+            let v = await ost.get('key');
             console.log('get key', v);
 
-            await odb.set('key', 'value');
-            v = await odb.get('key');
+            await ost.set('key', 'value');
+            v = await ost.get('key');
             console.log('get key', v);
             console.assert(v === 'value');
 
-            await odb.set('key', 'value2');
-            v = await odb.get('key');
+            await ost.set('key', 'value2');
+            v = await ost.get('key');
             console.log('get key', v);
             console.assert(v === 'value2');
 
 
-            await odb.set('id', 'id-value');
-            v = await odb.get('id');
+            await ost.set('id', 'id-value');
+            v = await ost.get('id');
             console.log('get id', v);
             console.assert(v === 'id-value');
 
-            let count = await odb.count();
+            let count = await ost.count();
             console.log('count', count);
             console.assert(count === 2);
 
@@ -85,68 +85,68 @@
                 name: 'name-value',
                 age: 'age-value'
             };
-            await odb.set('obj', obj);
-            v = await odb.get('obj');
+            await ost.set('obj', obj);
+            v = await ost.get('obj');
             console.log('get obj', v);
             console.assert(JSON.stringify(v) === JSON.stringify(obj));
 
-            count = await odb.count();
+            count = await ost.count();
             console.log('count', count);
             console.assert(count === 3);
 
-            await odb.delete('obj');
-            v = await odb.get('obj');
+            await ost.delete('obj');
+            v = await ost.get('obj');
             console.log('get obj after delete', v);
             console.assert(typeof v === 'undefined');
 
-            count = await odb.count();
+            count = await ost.count();
             console.log('count', count);
             console.assert(count === 2);
 
             console.log('each');
-            await odb.each((item, i) => {
+            await ost.each((item, i) => {
                 console.log(i, item);
             });
 
-            await odb.clear();
-            v = await odb.get('key');
+            await ost.clear();
+            v = await ost.get('key');
             console.log('get key after clear', v);
             console.assert(typeof v === 'undefined');
-            count = await odb.count();
+            count = await ost.count();
             console.log('count', count);
             console.assert(count === 0);
 
             console.log('close db');
-            odb.close();
-            //console.log(odb);
+            ost.close();
+            //console.log(ost);
         };
 
         const keyPathTest = async () => {
             console.log('=========================================================');
             console.log('keyPath id');
-            const odb = await openDB(dbName, 'store-key-path-id', 'id');
-            console.log('version', odb.db.version);
+            const ost = await openStore(dbName, 'store-key-path-id', 'id');
+            console.log('version', ost.db.version);
 
             const obj = {
                 id: 'id',
                 name: 'name'
             };
-            await odb.set(obj);
+            await ost.set(obj);
             console.log('set', obj);
         
-            let v = await odb.get('id');
+            let v = await ost.get('id');
             console.log('get id', v);
             console.assert(JSON.stringify(v) === JSON.stringify(obj));
             console.assert(v.name === 'name');
 
             console.log('each');
-            await odb.each((item, i) => {
+            await ost.each((item, i) => {
                 console.log(i, item);
             });
 
-            await odb.delete('id');
+            await ost.delete('id');
 
-            v = await odb.get('id');
+            v = await ost.get('id');
             console.log('get id after delete', v);
             console.assert(typeof v === 'undefined');
 
@@ -156,50 +156,50 @@
             console.log('=========================================================');
             console.log('autoIncrement true');
 
-            const odb = await openDB(dbName, 'store-auto-increment-true', true);
-            console.log('version', odb.db.version);
+            const ost = await openStore(dbName, 'store-auto-increment-true', true);
+            console.log('version', ost.db.version);
 
-            let v = await odb.get('key');
+            let v = await ost.get('key');
             console.log('get key', v);
 
             const obj = {
                 id: uid(4, 'id-'),
                 value: uid(10, 'name-')
             };
-            const r = await odb.add(obj);
+            const r = await ost.add(obj);
             if (r.error) {
                 console.error(r.error);
             }
             console.log('add', obj);
         
-            v = await odb.get(1);
+            v = await ost.get(1);
             console.log('get key', v);
 
-            await odb.put({
+            await ost.put({
                 id: 'id-1'
             }, 1);
 
-            v = await odb.get(1);
+            v = await ost.get(1);
             console.log('get key after put', v);
             console.assert(v.id === 'id-1');
 
-            const count = await odb.count();
+            const count = await ost.count();
             console.log('count', count);
 
-            const all = await odb.getAll();
+            const all = await ost.getAll();
             console.log('getAll', all);
             console.assert(all.length === count);
 
             console.log('each');
-            await odb.each((item, i) => {
+            await ost.each((item, i) => {
                 console.log(i, item);
             });
 
             console.log('clear');
-            await odb.clear();
+            await ost.clear();
 
             //console.log('close db');
-            //odb.close();
+            //ost.close();
         };
 
         const indexTest = async () => {
@@ -207,7 +207,7 @@
             console.log('index id and name');
 
             const storeName = 'store-index-name';
-            const odb = await openDB(dbName, storeName, {
+            const ost = await openStore(dbName, storeName, {
                 keyPath: 'id',
                 index: {
                     id: {
@@ -219,32 +219,32 @@
                 }
             });
 
-            await odb.put({
+            await ost.put({
                 id: 'id-1',
                 name: 'name-1'
             });
 
-            await odb.put({
+            await ost.put({
                 id: 'id-2',
                 name: 'name-2'
             });
 
-            await odb.put({
+            await ost.put({
                 id: 'id-3',
                 name: 'Tom And Jerry'
             });
 
-            let v = await odb.get('Tom And Jerry', 'name');
+            let v = await ost.get('Tom And Jerry', 'name');
             console.log('get by index name', 'Tom And Jerry', v);
 
-            v = await odb.get('id-1', 'id');
+            v = await ost.get('id-1', 'id');
             console.log('get by index id', 'id-1', v);
 
-            v = await odb.get('id-1');
+            v = await ost.get('id-1');
             console.log('get by keyPath id', 'id-1', v);
 
             console.log('each');
-            await odb.each((item, i) => {
+            await ost.each((item, i) => {
                 console.log(i, item);
             });
 
@@ -256,62 +256,62 @@
             console.log('store');
 
             const storeName = defaultStoreName;
-            const odb = await openDB(dbName, storeName);
+            const ost = await openStore(dbName, storeName);
 
-            console.log('getStoreNames', odb.getStoreNames());
-            const storeNum = odb.getStoreNames().length;
+            console.log('getStoreNames', ost.getStoreNames());
+            const storeNum = ost.getStoreNames().length;
             console.log('storeNum', storeNum);
 
-            let hasStore = await odb.hasStore(storeName);
+            let hasStore = await ost.hasStore(storeName);
             console.log('hasStore', storeName, hasStore);
             console.assert(hasStore === true);
 
             const storeNameNew1 = 'store-key-value-new-1';
-            await odb.createStore(storeNameNew1);
+            await ost.createStore(storeNameNew1);
             console.log('createStore', storeNameNew1);
-            console.assert(odb.storeName === storeNameNew1);
+            console.assert(ost.storeName === storeNameNew1);
 
             const storeNameNew2 = 'store-key-value-new-2';
-            await odb.createStore(storeNameNew2);
+            await ost.createStore(storeNameNew2);
             console.log('createStore', storeNameNew2);
-            console.assert(odb.storeName === storeNameNew2);
+            console.assert(ost.storeName === storeNameNew2);
 
-            console.log('getStoreNames', odb.getStoreNames());
-            console.assert(odb.getStoreNames().length === storeNum + 2);
+            console.log('getStoreNames', ost.getStoreNames());
+            console.assert(ost.getStoreNames().length === storeNum + 2);
 
             console.log('deleteStore no name');
-            await odb.deleteStore();
+            await ost.deleteStore();
 
             console.log('deleteStore wrong name');
-            await odb.deleteStore('wrongName');
+            await ost.deleteStore('wrongName');
 
             console.log('deleteStore', storeNameNew1);
-            await odb.deleteStore(storeNameNew1);
+            await ost.deleteStore(storeNameNew1);
         
-            hasStore = await odb.hasStore(storeNameNew1);
+            hasStore = await ost.hasStore(storeNameNew1);
             console.log('hasStore', storeNameNew1, hasStore);
             console.assert(hasStore === false);
 
-            console.log('getStoreNames', odb.getStoreNames());
-            console.assert(odb.getStoreNames().length === storeNum + 1);
+            console.log('getStoreNames', ost.getStoreNames());
+            console.assert(ost.getStoreNames().length === storeNum + 1);
 
             console.log('deleteStore', storeNameNew2);
-            await odb.deleteStore(storeNameNew2);
+            await ost.deleteStore(storeNameNew2);
         
-            hasStore = await odb.hasStore(storeNameNew2);
+            hasStore = await ost.hasStore(storeNameNew2);
             console.log('hasStore', storeNameNew2, hasStore);
             console.assert(hasStore === false);
 
-            await odb.useStore(storeName);
+            await ost.useStore(storeName);
             console.log('useStore', storeName);
-            console.assert(odb.storeName === storeName);
+            console.assert(ost.storeName === storeName);
 
-            console.log('getStoreNames', odb.getStoreNames());
-            console.assert(odb.getStoreNames().length === storeNum);
+            console.log('getStoreNames', ost.getStoreNames());
+            console.assert(ost.getStoreNames().length === storeNum);
         
         };
 
-        //console.log(openDB);
+        //console.log(openStore);
         const async = async () => {
 
             console.log('getDBs', await getDBs());
