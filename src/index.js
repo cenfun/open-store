@@ -6,10 +6,6 @@ const assertIndexedDB = () => {
     }
 };
 
-const getNewVersion = (db) => {
-    return parseInt(db.version) + 1;
-};
-
 export const closeDB = (dbName) => {
     const db = openedMap.get(dbName);
     if (db) {
@@ -68,7 +64,7 @@ class OpenDB {
 
     //===========================================================================================
 
-    open(upgradeHandler, version) {
+    open(handler, version) {
         return new Promise((resolve) => {
             closeDB(this.dbName);
             const request = indexedDB.open(this.dbName, version);
@@ -90,13 +86,14 @@ class OpenDB {
             };
             request.onupgradeneeded = () => {
                 //console.log('open onupgradeneeded');
-                upgradeHandler.call(this, request.result);
+                handler.call(this, request.result);
             };
         });
     }
 
-    async reopen(upgradeHandler) {
-        this.db = await this.open(upgradeHandler, getNewVersion(this.db));
+    async upgrade(handler) {
+        const newVersion = parseInt(this.db.version) + 1;
+        this.db = await this.open(handler, newVersion);
     }
 
     async init() {
@@ -104,13 +101,13 @@ class OpenDB {
             return this;
         }
 
-        const db = await this.open(this.createStoreHandler);
-        if (db.objectStoreNames.contains(this.storeName)) {
-            this.db = db;
+        this.db = await this.open(this.createStoreHandler);
+        if (this.db.objectStoreNames.contains(this.storeName)) {
             return this;
         }
 
-        this.db = await this.open(this.createStoreHandler, getNewVersion(db));
+        await this.upgrade(this.createStoreHandler);
+
         return this;
     }
 
@@ -121,11 +118,17 @@ class OpenDB {
             return;
         }
 
-        Object.keys(this.indexOptions).forEach((key) => {
-            const option = this.indexOptions[key];
-            store.createIndex(`by_${key}`, key, option);
+        Object.keys(this.indexOptions).forEach((indexKey) => {
+            const option = this.indexOptions[indexKey];
+            const indexName = this.indexNameHandler(indexKey);
+            store.createIndex(indexName, indexKey, option);
         });
+    }
 
+    indexNameHandler(indexKey) {
+        if (indexKey && typeof indexKey === 'string') {
+            return `by_${indexKey}`;
+        }
     }
 
     //===========================================================================================
@@ -142,7 +145,7 @@ class OpenDB {
         if (!this.hasStore(storeName)) {
             return;
         }
-        await this.reopen((db) => {
+        await this.upgrade((db) => {
             db.deleteObjectStore(storeName);
         });
     }
@@ -156,7 +159,7 @@ class OpenDB {
         }
         this.storeName = storeName;
         this.initStoreOptions(options);
-        await this.reopen(this.createStoreHandler);
+        await this.upgrade(this.createStoreHandler);
     }
 
     useStore(storeName) {
@@ -173,13 +176,20 @@ class OpenDB {
         return Array.from(this.db.objectStoreNames);
     }
 
+    getStore(db, storeName, rw = 'readonly') {
+        return db.transaction(storeName, rw).objectStore(storeName);
+    }
+
+    getCurrentStore(rw = 'readonly') {
+        return this.getStore(this.db, this.storeName, rw);
+    }
+
     //===========================================================================================
 
     promisedRequest(rw, handler) {
         return new Promise((resolve) => {
-            const transaction = this.db.transaction(this.storeName, rw);
-            const store = transaction.objectStore(this.storeName);
-            const request = handler(store);
+            const store = this.getCurrentStore(rw);
+            const request = handler.call(this, store);
             request.onsuccess = function(e) {
                 //console.log('set onsuccess');
                 resolve({
@@ -230,10 +240,10 @@ class OpenDB {
 
     //==========================================================
 
-    async get(key, indexName) {
+    async get(key, indexKey) {
         const response = await this.promisedRequest('readonly', (store) => {
-            if (indexName && typeof indexName === 'string') {
-                indexName = `by_${indexName}`;
+            const indexName = this.indexNameHandler(indexKey);
+            if (indexName) {
                 if (store.indexNames.contains(indexName)) {
                     return store.index(indexName).get(key);
                 }
@@ -259,6 +269,32 @@ class OpenDB {
             return [];
         }
         return response.result;
+    }
+
+    //==========================================================
+
+    each(handler) {
+        return new Promise((resolve) => {
+            const store = this.getCurrentStore('readonly');
+            //console.log('store', store);
+            const request = store.openCursor();
+            //console.log('request', request);
+            let index = 0;
+            request.onsuccess = (e) => {
+                //console.log('onsuccess');
+                const cursor = e.target.result;
+                if (cursor) {
+                    handler.call(this, cursor.value, index, cursor);
+                    index += 1;
+                    cursor.continue();
+                } else {
+                    resolve();
+                }
+            };
+            request.onerror = () => {
+                resolve();
+            };
+        });
     }
 
     //==========================================================

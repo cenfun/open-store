@@ -90,6 +90,11 @@
             console.log('count', count);
             console.assert(count === 2);
 
+            console.log('each');
+            await odb.each((item, i) => {
+                console.log(i, item);
+            });
+
             await odb.clear();
             v = await odb.get('key');
             console.log('get key after clear', v);
@@ -121,11 +126,17 @@
             console.assert(JSON.stringify(v) === JSON.stringify(obj));
             console.assert(v.name === 'name');
 
+            console.log('each');
+            await odb.each((item, i) => {
+                console.log(i, item);
+            });
+
             await odb.delete('id');
 
             v = await odb.get('id');
             console.log('get id after delete', v);
             console.assert(typeof v === 'undefined');
+
         };
 
         const autoIncrementTest = async () => {
@@ -166,7 +177,13 @@
             console.log('getAll', all);
             console.assert(all.length === count);
 
-            //await odb.clear();
+            console.log('each');
+            await odb.each((item, i) => {
+                console.log(i, item);
+            });
+
+            console.log('clear');
+            await odb.clear();
 
             //console.log('close db');
             //odb.close();
@@ -174,7 +191,7 @@
 
         const indexTest = async () => {
             console.log('=========================================================');
-            console.log('index');
+            console.log('index id and name');
 
             const storeName = 'store-index-name';
             const odb = await openDB(dbName, storeName, {
@@ -212,6 +229,11 @@
 
             v = await odb.get('id-1');
             console.log('get by keyPath id', 'id-1', v);
+
+            console.log('each');
+            await odb.each((item, i) => {
+                console.log(i, item);
+            });
 
         };
 
