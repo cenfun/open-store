@@ -139,14 +139,9 @@ class OpenDB {
         if (!storeName || typeof storeName !== 'string') {
             return;
         }
-        if (storeName === this.storeName) {
-            //can not delete current store
-            return;
-        }
         if (!this.hasStore(storeName)) {
             return;
         }
-
         await this.reopen((db) => {
             db.deleteObjectStore(storeName);
         });
@@ -159,7 +154,6 @@ class OpenDB {
         if (this.hasStore(storeName)) {
             return;
         }
-        this.close();
         this.storeName = storeName;
         this.initStoreOptions(options);
         await this.reopen(this.createStoreHandler);
@@ -218,6 +212,14 @@ class OpenDB {
 
     //==========================================================
 
+    delete(key) {
+        return this.promisedRequest('readwrite', (store) => {
+            return store.delete(key);
+        });
+    }
+
+    //==========================================================
+
     set(key, value) {
         //in-line keys if keyPath
         if (this.storeOptions.keyPath) {
@@ -244,14 +246,6 @@ class OpenDB {
             return;
         }
         return response.result;
-    }
-
-    //==========================================================
-
-    delete(key) {
-        return this.promisedRequest('readwrite', (store) => {
-            return store.delete(key);
-        });
     }
 
     //==========================================================

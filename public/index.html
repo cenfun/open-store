@@ -172,20 +172,77 @@
             //odb.close();
         };
 
+        const indexTest = async () => {
+            console.log('=========================================================');
+            console.log('index');
+
+            const storeName = 'store-index-name';
+            const odb = await openDB(dbName, storeName, {
+                keyPath: 'id',
+                index: {
+                    id: {
+                        unique: true
+                    },
+                    name: {
+                        unique: false
+                    }
+                }
+            });
+
+            await odb.put({
+                id: 'id-1',
+                name: 'name-1'
+            });
+
+            await odb.put({
+                id: 'id-2',
+                name: 'name-2'
+            });
+
+            await odb.put({
+                id: 'id-3',
+                name: 'Tom And Jerry'
+            });
+
+            let v = await odb.get('Tom And Jerry', 'name');
+            console.log('get by index name', 'Tom And Jerry', v);
+
+            v = await odb.get('id-1', 'id');
+            console.log('get by index id', 'id-1', v);
+
+            v = await odb.get('id-1');
+            console.log('get by keyPath id', 'id-1', v);
+
+        };
+
         const storeTest = async () => {
 
             console.log('=========================================================');
             console.log('store');
 
             const storeName = defaultStoreName;
-            let odb = await openDB(dbName, storeName);
+            const odb = await openDB(dbName, storeName);
 
             console.log('getStoreNames', odb.getStoreNames());
-            console.assert(odb.getStoreNames().length === 3);
+            const storeNum = odb.getStoreNames().length;
+            console.log('storeNum', storeNum);
 
             let hasStore = await odb.hasStore(storeName);
-            console.log(`hasStore ${storeName} ${hasStore}`);
+            console.log('hasStore', storeName, hasStore);
             console.assert(hasStore === true);
+
+            const storeNameNew1 = 'store-key-value-new-1';
+            await odb.createStore(storeNameNew1);
+            console.log('createStore', storeNameNew1);
+            console.assert(odb.storeName === storeNameNew1);
+
+            const storeNameNew2 = 'store-key-value-new-2';
+            await odb.createStore(storeNameNew2);
+            console.log('createStore', storeNameNew2);
+            console.assert(odb.storeName === storeNameNew2);
+
+            console.log('getStoreNames', odb.getStoreNames());
+            console.assert(odb.getStoreNames().length === storeNum + 2);
 
             console.log('deleteStore no name');
             await odb.deleteStore();
@@ -193,34 +250,30 @@
             console.log('deleteStore wrong name');
             await odb.deleteStore('wrongName');
 
-            console.log(`deleteStore current name: ${storeName}`);
-            await odb.deleteStore(storeName);
-            hasStore = await odb.hasStore(storeName);
-            console.log(`hasStore ${storeName} ${hasStore}`);
-            console.assert(hasStore === true);
-
-
-            const storeNameNew = 'store-key-value-new';
-            odb = await openDB(dbName, storeNameNew);
-            console.assert(odb.storeName === storeNameNew);
-
-            console.log('getStoreNames', odb.getStoreNames());
-            console.assert(odb.getStoreNames().length === 4);
-
-            await odb.useStore(storeName);
-            console.log(`useStore ${storeName}`);
-            console.assert(odb.storeName === storeName);
-
-            console.log(`deleteStore: ${storeNameNew}`);
-            await odb.deleteStore(storeNameNew);
-            hasStore = await odb.hasStore(storeNameNew);
-            console.log(`hasStore ${storeNameNew} ${hasStore}`);
+            console.log('deleteStore', storeNameNew1);
+            await odb.deleteStore(storeNameNew1);
+        
+            hasStore = await odb.hasStore(storeNameNew1);
+            console.log('hasStore', storeNameNew1, hasStore);
             console.assert(hasStore === false);
 
             console.log('getStoreNames', odb.getStoreNames());
-            console.assert(odb.getStoreNames().length === 3);
-        
+            console.assert(odb.getStoreNames().length === storeNum + 1);
 
+            console.log('deleteStore', storeNameNew2);
+            await odb.deleteStore(storeNameNew2);
+        
+            hasStore = await odb.hasStore(storeNameNew2);
+            console.log('hasStore', storeNameNew2, hasStore);
+            console.assert(hasStore === false);
+
+            await odb.useStore(storeName);
+            console.log('useStore', storeName);
+            console.assert(odb.storeName === storeName);
+
+            console.log('getStoreNames', odb.getStoreNames());
+            console.assert(odb.getStoreNames().length === storeNum);
+        
         };
 
         //console.log(openDB);
@@ -233,6 +286,8 @@
             await keyPathTest();
         
             await autoIncrementTest();
+
+            await indexTest();
         
             await storeTest();
 
