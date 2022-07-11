@@ -4,7 +4,8 @@
     "description": "open-db",
     "main": "dist/open-db.js",
     "scripts": {
-        "test": "echo \"Error: no test specified\" && exit 1"
+        "build": "sf lint && sf b -m",
+        "patch": "npm run build && sf publish patch"
     },
     "repository": {
         "type": "git",

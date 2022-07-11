@@ -6,7 +6,7 @@ const assertIndexedDB = () => {
     }
 };
 
-export const closeDB = (dbName) => {
+const closeDB = (dbName) => {
     const db = openedMap.get(dbName);
     if (db) {
         db.close();
@@ -132,6 +132,31 @@ class OpenDB {
     }
 
     //===========================================================================================
+
+    getCurrentStore(rw = 'readonly') {
+        return this.db.transaction(this.storeName, rw).objectStore(this.storeName);
+    }
+
+    promisedRequest(rw, handler) {
+        return new Promise((resolve) => {
+            const store = this.getCurrentStore(rw);
+            const request = handler.call(this, store);
+            request.onsuccess = function(e) {
+                //console.log('set onsuccess');
+                resolve({
+                    result: request.result
+                });
+            };
+            request.onerror = function(e) {
+                //console.log('set onerror');
+                resolve({
+                    error: request.error
+                });
+            };
+        });
+    }
+
+    //===========================================================================================
     //store API
 
     hasStore(storeName) {
@@ -174,35 +199,6 @@ class OpenDB {
 
     getStoreNames() {
         return Array.from(this.db.objectStoreNames);
-    }
-
-    getStore(db, storeName, rw = 'readonly') {
-        return db.transaction(storeName, rw).objectStore(storeName);
-    }
-
-    getCurrentStore(rw = 'readonly') {
-        return this.getStore(this.db, this.storeName, rw);
-    }
-
-    //===========================================================================================
-
-    promisedRequest(rw, handler) {
-        return new Promise((resolve) => {
-            const store = this.getCurrentStore(rw);
-            const request = handler.call(this, store);
-            request.onsuccess = function(e) {
-                //console.log('set onsuccess');
-                resolve({
-                    result: request.result
-                });
-            };
-            request.onerror = function(e) {
-                //console.log('set onerror');
-                resolve({
-                    error: request.error
-                });
-            };
-        });
     }
 
     //===========================================================================================
@@ -275,7 +271,7 @@ class OpenDB {
 
     each(handler) {
         return new Promise((resolve) => {
-            const store = this.getCurrentStore('readonly');
+            const store = this.getCurrentStore();
             //console.log('store', store);
             const request = store.openCursor();
             //console.log('request', request);

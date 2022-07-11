@@ -41,6 +41,19 @@
             console.log('=========================================================');
             console.log('default key-value set/get');
 
+            const odb = await openDB();
+            console.log('version', odb.db.version);
+
+            await odb.set('my-key', 'my-value');
+            const v = await odb.get('my-key');
+            console.assert(v === 'my-value');
+
+        };
+
+        const customNameTest = async () => {
+            console.log('=========================================================');
+            console.log('custom db name and store name');
+
             const odb = await openDB(dbName, defaultStoreName);
             console.log('version', odb.db.version);
 
@@ -304,6 +317,8 @@
             console.log('getDBs', await getDBs());
 
             await defaultTest();
+
+            await customNameTest();
 
             await keyPathTest();
         
