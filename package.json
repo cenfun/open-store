@@ -11,6 +11,9 @@
         "type": "git",
         "url": "git+https://github.com/cenfun/open-db.git"
     },
+    "files": [
+        "dist"
+    ],
     "author": "",
     "license": "MIT",
     "devDependencies": {
