@@ -58,7 +58,7 @@ const v = await ost.get('Tom And Jerry', 'name');
 import { getDBs, deleteDB, openStore } from "open-store";
 getDBs()
 deleteDB(dbName)
-openStore(dbName = 'db', storeName = 'store', options = {})
+const ost = await openStore(dbName = 'db', storeName = 'store', options = {})
 
 // data
 ost.add(value, key)
