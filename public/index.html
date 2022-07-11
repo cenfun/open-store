@@ -39,28 +39,28 @@
 
         const defaultTest = async () => {
             console.log('=========================================================');
-            console.log('default key-value setItem/getItem');
+            console.log('default key-value set/get');
 
             const odb = await openDB(dbName, defaultStoreName);
             console.log('version', odb.db.version);
 
-            let v = await odb.getItem('key');
-            console.log('getItem key', v);
+            let v = await odb.get('key');
+            console.log('get key', v);
 
-            await odb.setItem('key', 'value');
-            v = await odb.getItem('key');
-            console.log('getItem key', v);
+            await odb.set('key', 'value');
+            v = await odb.get('key');
+            console.log('get key', v);
             console.assert(v === 'value');
 
-            await odb.setItem('key', 'value2');
-            v = await odb.getItem('key');
-            console.log('getItem key', v);
+            await odb.set('key', 'value2');
+            v = await odb.get('key');
+            console.log('get key', v);
             console.assert(v === 'value2');
 
 
-            await odb.setItem('id', 'id-value');
-            v = await odb.getItem('id');
-            console.log('getItem id', v);
+            await odb.set('id', 'id-value');
+            v = await odb.get('id');
+            console.log('get id', v);
             console.assert(v === 'id-value');
 
             let count = await odb.count();
@@ -72,18 +72,18 @@
                 name: 'name-value',
                 age: 'age-value'
             };
-            await odb.setItem('obj', obj);
-            v = await odb.getItem('obj');
-            console.log('getItem obj', v);
+            await odb.set('obj', obj);
+            v = await odb.get('obj');
+            console.log('get obj', v);
             console.assert(JSON.stringify(v) === JSON.stringify(obj));
 
             count = await odb.count();
             console.log('count', count);
             console.assert(count === 3);
 
-            await odb.deleteItem('obj');
-            v = await odb.getItem('obj');
-            console.log('getItem obj after deleteItem', v);
+            await odb.delete('obj');
+            v = await odb.get('obj');
+            console.log('get obj after delete', v);
             console.assert(typeof v === 'undefined');
 
             count = await odb.count();
@@ -91,8 +91,8 @@
             console.assert(count === 2);
 
             await odb.clear();
-            v = await odb.getItem('key');
-            console.log('getItem key after clear', v);
+            v = await odb.get('key');
+            console.log('get key after clear', v);
             console.assert(typeof v === 'undefined');
             count = await odb.count();
             console.log('count', count);
@@ -113,18 +113,18 @@
                 id: 'id',
                 name: 'name'
             };
-            await odb.setItem(obj);
-            console.log('setItem', obj);
+            await odb.set(obj);
+            console.log('set', obj);
         
-            let v = await odb.getItem('id');
-            console.log('getItem id', v);
+            let v = await odb.get('id');
+            console.log('get id', v);
             console.assert(JSON.stringify(v) === JSON.stringify(obj));
             console.assert(v.name === 'name');
 
-            await odb.deleteItem('id');
+            await odb.delete('id');
 
-            v = await odb.getItem('id');
-            console.log('getItem id after deleteItem', v);
+            v = await odb.get('id');
+            console.log('get id after delete', v);
             console.assert(typeof v === 'undefined');
         };
 
@@ -135,31 +135,36 @@
             const odb = await openDB(dbName, 'store-auto-increment-true', true);
             console.log('version', odb.db.version);
 
-            let v = await odb.getItem('key');
-            console.log('getItem key', v);
+            let v = await odb.get('key');
+            console.log('get key', v);
 
             const obj = {
                 id: uid(4, 'id-'),
                 value: uid(10, 'name-')
             };
-            const r = await odb.addItem(obj);
+            const r = await odb.add(obj);
             if (r.error) {
                 console.error(r.error);
             }
-            console.log('addItem', obj);
+            console.log('add', obj);
         
-            v = await odb.getItem(1);
-            console.log('getItem key', v);
+            v = await odb.get(1);
+            console.log('get key', v);
 
-            await odb.putItem({
+            await odb.put({
                 id: 'id-1'
             }, 1);
 
-            v = await odb.getItem(1);
-            console.log('getItem key after putItem', v);
+            v = await odb.get(1);
+            console.log('get key after put', v);
             console.assert(v.id === 'id-1');
 
-            console.log('count', await odb.count());
+            const count = await odb.count();
+            console.log('count', count);
+
+            const all = await odb.getAll();
+            console.log('getAll', all);
+            console.assert(all.length === count);
 
             //await odb.clear();
 

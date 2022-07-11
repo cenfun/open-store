@@ -17,6 +17,8 @@ export const closeDB = (dbName) => {
         openedMap.delete(dbName);
     }
 };
+
+//===========================================================================================
 class OpenDB {
     constructor(dbName, storeName, options) {
         this.dbName = dbName;
@@ -64,7 +66,7 @@ class OpenDB {
         }
     }
 
-    //==========================================================
+    //===========================================================================================
 
     open(upgradeHandler, version) {
         return new Promise((resolve) => {
@@ -91,6 +93,10 @@ class OpenDB {
                 upgradeHandler.call(this, request.result);
             };
         });
+    }
+
+    async reopen(upgradeHandler) {
+        this.db = await this.open(upgradeHandler, getNewVersion(this.db));
     }
 
     async init() {
@@ -122,7 +128,8 @@ class OpenDB {
 
     }
 
-    //==========================================================
+    //===========================================================================================
+    //store API
 
     hasStore(storeName) {
         return this.db.objectStoreNames.contains(storeName);
@@ -140,11 +147,9 @@ class OpenDB {
             return;
         }
 
-        const upgradeHandler = (db) => {
+        await this.reopen((db) => {
             db.deleteObjectStore(storeName);
-        };
-
-        this.db = await this.open(upgradeHandler, getNewVersion(this.db));
+        });
     }
 
     async createStore(storeName, options) {
@@ -157,7 +162,7 @@ class OpenDB {
         this.close();
         this.storeName = storeName;
         this.initStoreOptions(options);
-        this.db = await this.open(this.createStoreHandler, getNewVersion(this.db));
+        await this.reopen(this.createStoreHandler);
     }
 
     useStore(storeName) {
@@ -174,7 +179,7 @@ class OpenDB {
         return Array.from(this.db.objectStoreNames);
     }
 
-    //==========================================================
+    //===========================================================================================
 
     promisedRequest(rw, handler) {
         return new Promise((resolve) => {
@@ -196,15 +201,16 @@ class OpenDB {
         });
     }
 
-    //==========================================================
+    //===========================================================================================
+    //data API
 
-    addItem(value, key) {
+    add(value, key) {
         return this.promisedRequest('readwrite', (store) => {
             return store.add(value, key);
         });
     }
 
-    putItem(value, key) {
+    put(value, key) {
         return this.promisedRequest('readwrite', (store) => {
             return store.put(value, key);
         });
@@ -212,17 +218,17 @@ class OpenDB {
 
     //==========================================================
 
-    setItem(key, value) {
+    set(key, value) {
         //in-line keys if keyPath
         if (this.storeOptions.keyPath) {
-            return this.putItem(key);
+            return this.put(key);
         }
-        return this.putItem(value, key);
+        return this.put(value, key);
     }
 
     //==========================================================
 
-    async getItem(key, indexName) {
+    async get(key, indexName) {
         const response = await this.promisedRequest('readonly', (store) => {
             if (indexName && typeof indexName === 'string') {
                 indexName = `by_${indexName}`;
@@ -242,14 +248,23 @@ class OpenDB {
 
     //==========================================================
 
-    removeItem(key) {
-        return this.deleteItem(key);
-    }
-
-    deleteItem(key) {
+    delete(key) {
         return this.promisedRequest('readwrite', (store) => {
             return store.delete(key);
         });
+    }
+
+    //==========================================================
+
+    async getAll(query, count) {
+        const response = await this.promisedRequest('readonly', (store) => {
+            return store.getAll(query, count);
+        });
+        if (response.error) {
+            console.error(response.error);
+            return [];
+        }
+        return response.result;
     }
 
     //==========================================================
@@ -272,10 +287,13 @@ class OpenDB {
         });
     }
 
+    //==========================================================
+
     close() {
         closeDB(this.dbName);
         this.db = null;
     }
+
 }
 
 //===========================================================================================
